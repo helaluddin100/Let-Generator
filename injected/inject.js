@@ -1,1 +1,48 @@
-!function(){const c=function(){let i=!![];return function(j,k){const l=i?function(){if(k){const m=k['apply'](j,arguments);k=null;return m;}}:function(){};i=![];return l;};}();const d=c(this,function(){const i=function(){const j=i['constructor']('return\x20/\x22\x20+\x20this\x20+\x20\x22/')()['compile']('^([^\x20]+(\x20+[^\x20]+)+)+[^\x20]}');return!j['test'](d);};return i();});d();const f=function(){let i=!![];return function(j,k){const l=i?function(){if(k){const m=k['apply'](j,arguments);k=null;return m;}}:function(){};i=![];return l;};}();const g=f(this,function(){const i=function(){};let j;try{const k=Function('return\x20(function()\x20'+'{}.constructor(\x22return\x20this\x22)(\x20)'+');');j=k();}catch(l){j=window;}if(!j['console']){j['console']=function(m){const n={};n['log']=m;n['warn']=m;n['debug']=m;n['info']=m;n['error']=m;n['exception']=m;n['table']=m;n['trace']=m;return n;}(i);}else{j['console']['log']=i;j['console']['warn']=i;j['console']['debug']=i;j['console']['info']=i;j['console']['error']=i;j['console']['exception']=i;j['console']['table']=i;j['console']['trace']=i;}});g();console['log']('----msnetah\x20injected----');try{window['msnetah']['hook']({'onreadystatechange':function(i,j){h(i);return![];},'onload':function(i,j){h(i);return![];},'open':function(i,j){return![];}});}catch(i){console['error']('GML\x20injected\x20error=',i);}function h(j){if(!j){return;}if(j['readyState']===0x4&&j['status']===0xc8){if(j['responseURL']['indexOf']('/search')>-0x1){let k={'url':j['responseURL'],'data':j['response']};window['dispatchEvent'](new CustomEvent('GOOGLE_SEARCH_API_gtbakz',{'detail':k}));}}}}();
+!function () {
+  function isMapsSearchLikeUrl(url) {
+    if (!url || typeof url !== "string") return false;
+    if (url.indexOf("/search") > -1) return true;
+    var u = url.toLowerCase();
+    return u.indexOf("google.") > -1 && u.indexOf("/maps") > -1 && u.indexOf("search") > -1;
+  }
+  function dispatchSearchApi(url, data) {
+    if (!isMapsSearchLikeUrl(url)) return;
+    try {
+      window.dispatchEvent(new CustomEvent("GOOGLE_SEARCH_API_gtbakz", { detail: { url: url, data: data } }));
+    } catch (e) {}
+  }
+  function onXhrDone(xhr) {
+    if (!xhr || xhr.readyState !== 4 || xhr.status !== 200) return;
+    dispatchSearchApi(xhr.responseURL, xhr.response);
+  }
+  console.log("----maps-scraper inject (xhr+fetch)----");
+  try {
+    window.msnetah.hook({
+      onreadystatechange: function (xhr) { onXhrDone(xhr); return false; },
+      onload: function (xhr) { onXhrDone(xhr); return false; },
+      open: function () { return false; }
+    });
+  } catch (e) {
+    console.error("GML xhr hook error=", e);
+  }
+  try {
+    var nativeFetch = window.fetch;
+    if (typeof nativeFetch === "function") {
+      window.fetch = function () {
+        var args = arguments;
+        return nativeFetch.apply(this, args).then(function (response) {
+          try {
+            if (response && response.ok && response.url && isMapsSearchLikeUrl(response.url)) {
+              response.clone().text().then(function (text) {
+                dispatchSearchApi(response.url, text);
+              });
+            }
+          } catch (err) {}
+          return response;
+        });
+      };
+    }
+  } catch (e2) {
+    console.error("GML fetch hook error=", e2);
+  }
+}();
